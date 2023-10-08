@@ -1,0 +1,52 @@
+{
+  "name": "Food picker",
+  "description": "Help you check peoples allowances, and create group order quickly. Powered by @yukun.yang@fe_p2p@fuantuan",
+  "version": "1.0",
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_icon": {
+      "16": "toolbar.png",
+      "24": "toolbar.png",
+      "32": "toolbar.png"
+    },
+    "default_popup": "index.html",
+    "default_title": "Food picker"
+  },
+  "host_permissions": [
+    "http://localhost/*/",
+    "https://www.foodpanda.sg/"
+  ],
+  "permissions": [
+    "background",
+    "notifications",
+    "tabs",
+    "storage",
+    "cookies",
+    "activeTab",
+    "scripting",
+    "unlimitedStorage",
+    "alarms",
+    "offscreen"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject-script.js"],
+      "matches": ["https://www.foodpanda.sg/*"]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://www.foodpanda.sg/*"],
+      "js": ["content-script.js"]
+    }
+  ],
+  "icons": {
+    "16": "logo.png",
+    "48": "logo.png",
+    "128": "logo.png"
+  }
+}
