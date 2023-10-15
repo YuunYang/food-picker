@@ -101,8 +101,7 @@ const Home = () => {
 
   return (
     <div className={styles.home}>
-      {items.length === 0 && Search}
-      {items.length > 0 ? (
+      {items?.length > 0 ? (
         <Tabs
           tabBarExtraContent={{
             right: Search,
@@ -116,6 +115,7 @@ const Home = () => {
         />
       ) : (
         <div>
+          {Search}
           <div style={{ textAlign: "center" }}>
             <SmileOutlined style={{ fontSize: 20 }} rev={undefined} />
             <p>Add a group to start ordering</p>

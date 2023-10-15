@@ -163,7 +163,7 @@ const AllowanceList = ({ keyId }: Props) => {
         size="small"
         columns={columns}
         dataSource={[...dataSource]}
-        pagination={{ pageSize: 10 }}
+        pagination={false}
         scroll={{ y: 250 }}
         loading={loading}
       />

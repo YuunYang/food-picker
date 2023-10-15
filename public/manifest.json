@@ -3,6 +3,10 @@
   "description": "Help you check peoples allowances, and create group order quickly. Powered by @yukun.yang@fe_p2p@fuantuan",
   "version": "1.0",
   "manifest_version": 3,
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
   "action": {
     "default_icon": {
       "16": "toolbar.png",
@@ -17,12 +21,16 @@
     "https://www.foodpanda.sg/"
   ],
   "permissions": [
+    "background",
+    "notifications",
     "tabs",
     "storage",
     "cookies",
     "activeTab",
     "scripting",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "alarms",
+    "offscreen"
   ],
   "web_accessible_resources": [
     {

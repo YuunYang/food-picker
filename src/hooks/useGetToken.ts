@@ -1,24 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useMyContext } from "./useContext";
 import { getFromStorage } from "../utils";
+import { getAddress } from "./useRequest";
 
 export const useGetInitial = () => {
-  const { updateStorage, setVendorCode } = useMyContext()
+  const { updateStorage, setVendorCode, setTab } = useMyContext()
+
   useEffect(() => {
     (async () => {
       const token = await getFromStorage("token");
       const host = await getFromStorage("host");
       const list = await getFromStorage("list");
+      const enableNote = await getFromStorage("enableNote");
       updateStorage('list', list ?? {});
-      if(token && host?.code) {
-        updateStorage('token', token);
-        updateStorage('host', host);
-        return;
-      }
+      updateStorage('enableNote', !!enableNote);
       chrome.tabs.query({ "status": "complete" }, function (tabs) {
         const tab = tabs.find(item => item.url?.startsWith('https://www.foodpanda.sg'));
         const url = tab?.url;
         const id = tab?.id;
+        setTab(tab);
+        if(token && host?.code) {
+          updateStorage('token', token);
+          updateStorage('host', host);
+          return;
+        }
         if (url) {
           chrome.cookies.getAll({ url }, (cookie) => {
             const tokenValue = cookie.find(item => item.name === 'token')?.value;
@@ -36,6 +41,10 @@ export const useGetInitial = () => {
           })
         }
       });
+      if(token) {
+        const referenceId = await getAddress(token);
+        updateStorage("referenceId", referenceId);
+      }
     })()
   }, []);
 

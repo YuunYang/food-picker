@@ -1,7 +1,7 @@
 import axios from "axios";
-import { ADD_PARTICIPANTS, ALLOWANCE, GET_COLLEAGUES, GROUP_INITIATE, VENDOR } from "../constants/url";
+import { ADDRESS, ADD_PARTICIPANTS, ALLOWANCE, GET_COLLEAGUES, GROUP_INITIATE, VENDOR } from "../constants/url";
 import { useEffect, useState } from "react";
-import { AllowanceRes, ColleaguesRes } from "../types";
+import { AllowanceRes, ColleaguesRes, Address } from "../types";
 import { useMyContext } from "./useContext";
 
 const getRequestHeaders = (token: string) => {
@@ -12,14 +12,17 @@ const getRequestHeaders = (token: string) => {
   }
 }
 
-const getParticipant = async (query: string, date: string, token: string) => {
+const getParticipant = async (params: {
+  query: string; date: string; token: string; referenceId?: number
+}) => {
+  const { query, date, token, referenceId } = params;
   const headers = getRequestHeaders(token)
   const { data } = await axios.get(GET_COLLEAGUES, {
     params: {
       query,
       expedition: 'delivery',
       order_time: date,
-      corporate_reference_id: '120050'
+      corporate_reference_id: `${referenceId ?? 120145}`
     },
     headers
   });
@@ -28,7 +31,7 @@ const getParticipant = async (query: string, date: string, token: string) => {
 
 export const useGetParticipants = (list: string[]) => {
   const { date, storage } = useMyContext()
-  const { token, host } = storage;
+  const { token, host, referenceId } = storage;
 
   const [participantMap, setParticipantMap] = useState<Map<string, any>>(new Map([
     [host?.code || '', host?.name || '']
@@ -36,8 +39,13 @@ export const useGetParticipants = (list: string[]) => {
   useEffect(() => {
     const map = new Map();
     Promise.all(list.map(async (key) => {
-      if (!token) return
-      const resp = await getParticipant(key, date.format(), token);
+      if (!token || !referenceId) return
+      const resp = await getParticipant({
+        query: key,
+        date: date.format(),
+        token,
+        referenceId
+      });
       if (resp) {
         const participant = resp[0];
         const name = `${participant.last_name} ${participant.first_name}`
@@ -48,7 +56,7 @@ export const useGetParticipants = (list: string[]) => {
     })).then(() => {
       setParticipantMap(map)
     })
-  }, [date, list])
+  }, [date, list, referenceId, token])
 
   return participantMap;
 }
@@ -57,7 +65,8 @@ export const useGetAllowanceList = (idList: string[]): [AllowanceRes[], boolean]
   const [list, setList] = useState<AllowanceRes[]>([])
   const [loading, setLoading] = useState(false);
   const { date, storage } = useMyContext()
-  const { token } = storage;
+  const { token, referenceId } = storage;
+  console.log(referenceId)
   useEffect(() => {
     if (!token) return
     setLoading(true)
@@ -68,7 +77,7 @@ export const useGetAllowanceList = (idList: string[]): [AllowanceRes[], boolean]
         participants: idList.join(','),
         vertical: 'restaurants',
         expedition_type: 'delivery',
-        company_location_id: '120050'
+        company_location_id: referenceId
       },
       headers
     }).then(({ data }) => {
@@ -82,7 +91,7 @@ export const useGetAllowanceList = (idList: string[]): [AllowanceRes[], boolean]
 
 export const useInitialGroup = (participantMap: { name: string, customer_code: string }[]) => {
   const { storage, vendorCode, date } = useMyContext()
-  const { token, host } = storage;
+  const { token, host, referenceId } = storage;
   if (!token) return;
   const headers = getRequestHeaders(token);
 
@@ -132,7 +141,7 @@ export const useInitialGroup = (participantMap: { name: string, customer_code: s
           "label": null,
           "formatted_customer_address": "Marina Boulevard, MBFC 3, #13-01 Singapore 018982",
           "campus": "OKG Level 13",
-          "corporate_reference_id": 120050,
+          "corporate_reference_id": referenceId || 120145,
           "form_id": null,
           "country_code": "SG",
           "created_at": "2023-03-01T08:22:16Z",
@@ -179,16 +188,33 @@ export const useSearchColleagues = (query?: string) => {
   // this is to format stored data
   const [list, setList] = useState<ColleaguesRes[]>([])
   const { date, storage } = useMyContext()
-  const { token } = storage;
+  const { token, referenceId } = storage;
   useEffect(() => {
-    if (!token || !query) {
+    if (!token || !query || !referenceId) {
       setList([])
       return
     }
-    getParticipant(query, new Date(date.format()).toISOString(), token).then((data) => {
+    getParticipant({
+      query,
+      date: new Date(date.format()).toISOString(),
+      token,
+      referenceId,
+    }).then((data) => {
       setList(data);
     })
-  }, [query])
+  }, [query, referenceId])
 
   return list;
+}
+
+export const getAddress = (token: string) => {
+  const headers = getRequestHeaders(token)
+  return axios.get<{ data: { items: Address[] } }>(ADDRESS, {
+    headers
+  }).then(({ data }) => {
+    const list = data?.data?.items;
+    const corporate_reference_id = list.find((address) => address.corporate_reference_id)?.corporate_reference_id
+    console.log(corporate_reference_id)
+    return corporate_reference_id;
+  })
 }

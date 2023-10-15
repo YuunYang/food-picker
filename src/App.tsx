@@ -9,6 +9,8 @@ import dayjs from "dayjs";
 import { setToStorage } from "./utils";
 import { useChromeStorage } from "./hooks/useChromeStorage";
 import Home from "./containers/Home";
+import Notification from "./components/Notification";
+import release from './release.json';
 
 // Create the context
 export const MyContext = createContext<MyContextType | null>(null);
@@ -23,14 +25,15 @@ export const MyContextProvider = ({ children }: any) => {
   const [date, setDate] = useState(dayjs(new Date(year, month, day, formatHour)));
   const [storage, setStorage] = useState<any>({});
   const [vendorCode, setVendorCode] = useState('');
-  
+  const [tab, setTab] = useState<chrome.tabs.Tab>();
+
   const updateStorage = (key: string, value: any) => {
     setStorage((prev: any) => ({ ...prev, [key]: value }))
     setToStorage(key, value);
   }
   
   return (
-    <MyContext.Provider value={{ date, setDate, storage, updateStorage, vendorCode, setVendorCode }}>
+    <MyContext.Provider value={{ date, setDate, storage, updateStorage, vendorCode, setVendorCode, tab, setTab }}>
       {children}
     </MyContext.Provider>
   );
@@ -45,10 +48,16 @@ const App = () => {
   return (
     <div className={styles.app}>
       <div className={styles.title}>
-        <img src={logo} />
+        <img src={logo} alt="food-picker" />
         Food Picker - Fuan Tuan
+        <span className={styles.notificationWrap}>
+          <Notification />
+        </span>
       </div>
       {token && host?.code ? <Home /> : <Auth />}
+      <footer className={styles.footer}>
+        Powered by Fuantuan. {release.release_date && `Last update ${dayjs(release.release_date).format('YYYY-MM-DD')}`}
+      </footer>
     </div>
   );
 }
