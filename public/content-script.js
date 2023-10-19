@@ -8,7 +8,12 @@ function injectScript(file, node) {
 injectScript(chrome.runtime.getURL("inject-script.js"), "body");
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  if (request.type === "GROUP_ID") {
+  if (request.type === "GET_GROUP_ID") {
+    const groupOrderId = localStorage.getItem('groupOrderId');
+    sendResponse({ groupOrderId })
+    return true;
+  }
+  if (request.type === "SET_GROUP_ID") {
     localStorage.setItem('groupOrderOtp', JSON.stringify({
       groupOrderId: request.groupOrderId,
       isHost: true,

@@ -19,3 +19,15 @@ export const debounce = (callback: (...args: any) => void, wait: number) => {
 
   return debouncedFunc;
 }
+
+export function sendMessagePromise(tabId: number, item: Record<string, string>): Promise<Record<string, string>> {
+  return new Promise((resolve, reject) => {
+      chrome.tabs.sendMessage(tabId, item, (response: Record<string, string>) => {
+          if(response) {
+              resolve(response);
+          } else {
+              reject({});
+          }
+      });
+  });
+}

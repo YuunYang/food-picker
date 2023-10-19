@@ -3,6 +3,7 @@ import { ADDRESS, ADD_PARTICIPANTS, ALLOWANCE, GET_COLLEAGUES, GROUP_INITIATE, V
 import { useEffect, useState } from "react";
 import { AllowanceRes, ColleaguesRes, Address } from "../types";
 import { useMyContext } from "./useContext";
+import { sendMessagePromise } from "../utils";
 
 const getRequestHeaders = (token: string) => {
   return {
@@ -98,75 +99,83 @@ export const useInitialGroup = (participantMap: { name: string, customer_code: s
   const request = async () => {
     const { data: vendorData } = await axios.get(`${VENDOR}/${vendorCode}`)
     const vendorName = vendorData?.data?.name
-    const { data } = await axios.post(GROUP_INITIATE, {
-      host,
-      vendor: {
-        name: vendorName,
-        code: vendorCode
-      },
-      fulfilment_time: new Date(date.format()).toISOString(),
-      fulfilment_time_text: `Delivery ${date.format('ddd DD, HH:mm')}`,
-      expedition_type: "delivery",
-      fulfilment_address: "Marina Boulevard, MBFC 3, #13-01 Singapore 018982",
-      additional_parameters: {
-        address: {
-          "id": 31062756,
-          "city_id": 1,
-          "city": "Singapore",
-          "city_name": null,
-          "area_id": null,
-          "areas": null,
-          "address_line1": "Marina Boulevard, MBFC 3, #13-01",
-          "address_line2": null,
-          "address_line3": null,
-          "address_line4": null,
-          "address_line5": null,
-          "address_other": "#13-01, Marina Boulevard, MBFC 3, Singapore 018982",
-          "room": null,
-          "flat_number": null,
-          "structure": null,
-          "building": "MBFC Tower 3",
-          "intercom": null,
-          "entrance": null,
-          "floor": "#13-01",
-          "district": null,
-          "postcode": "018982",
-          "meta": null,
-          "company": "OKG",
-          "longitude": 103.8544967,
-          "latitude": 1.2790221,
-          "is_delivery_available": true,
-          "delivery_instructions": null,
-          "title": null,
-          "label": null,
-          "formatted_customer_address": "Marina Boulevard, MBFC 3, #13-01 Singapore 018982",
-          "campus": "OKG Level 13",
-          "corporate_reference_id": referenceId || 120145,
-          "form_id": null,
-          "country_code": "SG",
-          "created_at": "2023-03-01T08:22:16Z",
-          "updated_at": "2023-05-16T10:06:35Z",
-          "location_type": "polygon",
-          "object_type": "saved address",
-          "type": "5",
-          "phone_country_code": null,
-          "phone_number": null,
-          "formatted_address": null,
-          "is_same_as_requested_location": null,
-          "block": null
-        },
-        is_order_on_behalf: true
-      }
-    }, {
-      headers
-    })
-
-    const groupOrderId = data?.data?.groupie_id;
+  
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
     const id = tabs?.[0].id;
     const groupOrderUrl = tabs?.[0].url;
     if (!id) return
-    await chrome.tabs.sendMessage(id, { type: 'GROUP_ID', groupOrderId, groupOrderUrl })
+    let groupOrderId;
+    const resp = await sendMessagePromise(id, { type: 'GET_GROUP_ID' })
+    groupOrderId = resp?.groupOrderId;
+
+    if(!groupOrderId) {
+      const { data } = await axios.post(GROUP_INITIATE, {
+        host,
+        vendor: {
+          name: vendorName,
+          code: vendorCode
+        },
+        fulfilment_time: new Date(date.format()).toISOString(),
+        fulfilment_time_text: `Delivery ${date.format('ddd DD, HH:mm')}`,
+        expedition_type: "delivery",
+        fulfilment_address: "Marina Boulevard, MBFC 3, #13-01 Singapore 018982",
+        additional_parameters: {
+          address: {
+            "id": 31062756,
+            "city_id": 1,
+            "city": "Singapore",
+            "city_name": null,
+            "area_id": null,
+            "areas": null,
+            "address_line1": "Marina Boulevard, MBFC 3, #13-01",
+            "address_line2": null,
+            "address_line3": null,
+            "address_line4": null,
+            "address_line5": null,
+            "address_other": "#13-01, Marina Boulevard, MBFC 3, Singapore 018982",
+            "room": null,
+            "flat_number": null,
+            "structure": null,
+            "building": "MBFC Tower 3",
+            "intercom": null,
+            "entrance": null,
+            "floor": "#13-01",
+            "district": null,
+            "postcode": "018982",
+            "meta": null,
+            "company": "OKG",
+            "longitude": 103.8544967,
+            "latitude": 1.2790221,
+            "is_delivery_available": true,
+            "delivery_instructions": null,
+            "title": null,
+            "label": null,
+            "formatted_customer_address": "Marina Boulevard, MBFC 3, #13-01 Singapore 018982",
+            "campus": "OKG Level 13",
+            "corporate_reference_id": referenceId || 120145,
+            "form_id": null,
+            "country_code": "SG",
+            "created_at": "2023-03-01T08:22:16Z",
+            "updated_at": "2023-05-16T10:06:35Z",
+            "location_type": "polygon",
+            "object_type": "saved address",
+            "type": "5",
+            "phone_country_code": null,
+            "phone_number": null,
+            "formatted_address": null,
+            "is_same_as_requested_location": null,
+            "block": null
+          },
+          is_order_on_behalf: true
+        }
+      }, {
+        headers
+      })
+  
+      groupOrderId = data?.data?.groupie_id;
+  
+      await chrome.tabs.sendMessage(id, { type: 'SET_GROUP_ID', groupOrderId, groupOrderUrl })
+    }
 
     const reqBody = {
       groupie_id: groupOrderId,
