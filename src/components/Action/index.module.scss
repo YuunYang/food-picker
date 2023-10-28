@@ -2,7 +2,10 @@
   margin-bottom: 10px;
   display: flex;
   align-items: center;
-  .btn {
+  .btns {
     margin-left: auto;
+    .btn {
+      margin-left: 5px;
+    }
   }
 }

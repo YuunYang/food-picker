@@ -1,14 +1,25 @@
 import dayjs from "dayjs";
 
-interface Storage {
+export interface ListItem {
+  realName: string,
+  email: string,
+  customer_code?: string,
+  token?: string,
+  allowance?: number
+}
+
+export interface Group {
+  name: string; 
+  key: string; 
+  colleagues: ListItem[];
+  list?: ListItem[]
+}
+export interface Storage {
   token?: string;
-  host?: {
-    name: string;
-    code: string;
-  };
+  host?: ListItem;
   list?: {
     key: string;
-    groups: { name: string; key: string; list: string[] }[];
+    groups: Group[];
   };
   enableNote?: boolean;
   referenceId?: number;
@@ -84,4 +95,45 @@ export interface Address {
   phone_country_code: null;
   block: null;
   property_type: null;
+}
+
+export interface Group_Detail {
+  order_code: string;
+  host: Host;
+  guests: Guest[];
+  vendor: Host;
+  expedition_type: string;
+  expedition_time_text: string;
+  fulfilment_address: string;
+  fulfilment_time: Date;
+  fulfilment_time_text: string;
+  fulfilment_type: string;
+  corporate: Corporate;
+  additional_parameters: AdditionalParameters;
+  updated_at: Date;
+  last_sync_time: Date;
+  state: string;
+}
+
+export interface AdditionalParameters {
+  address: Address;
+}
+
+export interface Corporate {
+  company_id: number;
+  company_name: string;
+  location_id: number;
+  is_split_allowance: boolean;
+}
+
+export interface Guest {
+  name: string;
+  code: string;
+  updated_at: Date;
+  state: string;
+}
+
+export interface Host {
+  name: string;
+  code: string;
 }

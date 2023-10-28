@@ -1,5 +1,7 @@
-export const getFromStorage = async (key: string) => {
-  const data = await chrome?.storage?.local?.get(key)
+import { Storage } from "./types"
+
+export const getFromStorage = async <T extends keyof Storage>(key: T): Promise<Storage[T]> => {
+  const data = await chrome?.storage?.local?.get(key as string)
   return data[key]
 }
 

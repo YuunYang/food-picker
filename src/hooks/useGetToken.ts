@@ -10,8 +10,29 @@ export const useGetInitial = () => {
     (async () => {
       const token = await getFromStorage("token");
       const host = await getFromStorage("host");
-      const list = await getFromStorage("list");
+      let list = await getFromStorage("list");
       const enableNote = await getFromStorage("enableNote");
+      if(list?.groups?.[0]?.list) {
+        list = {
+          ...list,
+          groups: list.groups.map(item => ({
+            ...item,
+            colleagues: item.list
+          })) as any
+        }
+      }
+      if(typeof list?.groups?.[0]?.colleagues?.[0] === 'string') {
+        list = {
+          ...list,
+          groups: list.groups.map(item => ({
+            ...item,
+            colleagues: item.colleagues.map(listItem => ({
+              email: listItem,
+              token: '',
+            }))
+          })) as any
+        }
+      }
       updateStorage('list', list ?? {});
       updateStorage('enableNote', !!enableNote);
       chrome.tabs.query({ "status": "complete" }, function (tabs) {
@@ -19,7 +40,7 @@ export const useGetInitial = () => {
         const url = tab?.url;
         const id = tab?.id;
         setTab(tab);
-        if(token && host?.code) {
+        if(token && host?.customer_code) {
           updateStorage('token', token);
           updateStorage('host', host);
           return;
@@ -30,13 +51,14 @@ export const useGetInitial = () => {
             updateStorage('token', tokenValue || '');
           });
         }
-        if (id && !host?.code) {
+        if (id && !host?.customer_code) {
           chrome.tabs.sendMessage(id, { type: 'RECEIVE' })
           chrome.runtime.onMessage.addListener((message) => {
             const user = message.essential.user
             updateStorage('host', {
-              name: `${user.firstName} ${user.lastName}`,
-              code: user.code
+              email: user.email,
+              realName: `${user.firstName} ${user.lastName}`,
+              customer_code: user.code
             })
           })
         }

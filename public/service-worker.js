@@ -1,8 +1,9 @@
+/* eslint-disable no-restricted-globals */
 /* eslint-disable no-undef */
 const keys = {
   lunch: "lunch",
   ot: "ot",
-}
+};
 
 const oneDay = 86400000;
 
@@ -11,10 +12,9 @@ chrome.runtime.onStartup.addListener(keepAlive);
 keepAlive();
 
 const setUpAlarm = async (key) => {
-  const enableNote = (await chrome?.storage?.local?.get("enableNote"))
+  const enableNote = (await chrome?.storage?.local?.get(["enableNote"]))
     .enableNote;
   if (enableNote) {
-
     const thisLunch = new Date().setHours(10, 30, 0, 0);
     const thisOT = new Date().setHours(16, 30, 0, 0);
 
@@ -22,7 +22,7 @@ const setUpAlarm = async (key) => {
 
     let delay = noteTime - Date.now();
 
-    if(delay < 0) {
+    if (delay < 0) {
       delay = oneDay + delay;
     }
 
@@ -64,14 +64,14 @@ const handlerAlarm = (alarm) => {
   });
   chrome.notifications.onClicked.addListener(() => {
     chrome.tabs.create({ url: "https://www.foodpanda.sg/" });
-    chrome.notifications.clear(noteName)
+    chrome.notifications.clear(noteName);
   });
-}
+};
 
 chrome.storage.onChanged.addListener((changes) => {
   for (let [key] of Object.entries(changes)) {
-    console.log(key)
-    if(key === 'enableNote') {
+    console.log(key);
+    if (key === "enableNote") {
       setUpAlarm(keys.lunch);
       setUpAlarm(keys.ot);
     }
@@ -79,3 +79,42 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 chrome.alarms.onAlarm.addListener(handlerAlarm);
+
+/* Start doing intercept */
+
+const urlFilter = 'https://sg.fd-api.com/api/v5/cart/calculate'
+
+const getModifyHeaderRule = (id, value) => {
+  return {
+    id,
+    priority: 1,
+    action: {
+      type: "modifyHeaders",
+      requestHeaders: [{ 
+        header: 'Authorization',
+        value,
+        operation: 'set'
+      }]
+    },
+    condition: {
+      urlFilter,
+    }
+  }
+}
+
+// chrome.webRequest.onBeforeSendHeaders.addListener(
+//   function(details) {
+//     if (details.url.startsWith(urlFilter)) {
+//       const nextRule = getModifyHeaderRule(1, `Bearer test`)
+//       console.log(nextRule)
+//       chrome.declarativeNetRequest.updateDynamicRules({
+//         removeRuleIds: [1],
+//         addRules: [nextRule]
+//       })
+//     }
+//   },
+//   {
+//     urls: ["<all_urls>"],
+//   },
+//   ['requestHeaders']
+// );

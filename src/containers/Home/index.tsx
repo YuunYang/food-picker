@@ -62,7 +62,7 @@ const Home = () => {
     updateStorage("list", {
       ...list,
       key,
-      groups: [...(list?.groups ?? []), { key, name: value, list: [] }],
+      groups: [...(list?.groups ?? []), { key, name: value, colleagues: [] }],
     });
     setValue("");
   };

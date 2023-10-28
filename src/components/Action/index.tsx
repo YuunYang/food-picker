@@ -1,23 +1,25 @@
 import { Button, DatePicker, DatePickerProps, Tooltip } from "antd";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useMyContext } from "../../hooks/useContext";
 import dayjs from "dayjs";
 import styles from "./index.module.scss";
+import { useGetGroupDetails, useGetIdAndGroupId } from "../../hooks/useRequest";
+import { Guest } from "../../types";
 
 const Action = ({ onAdd }: any) => {
-  const { date, setDate, vendorCode } = useMyContext();
+  const { date, setDate } = useMyContext();
 
-  const tip = `${
-    vendorCode
-      ? `Don't forget to select ppl you want group order with, and after page reloaded, 
-  pls wait a second for the data update. 
-  If page didn't update, pls try reopen this extension and refresh page`
-      : "Please go to one restaurant page to make this btn enable."
-  }`;
+  const [id, groupOrderId] = useGetIdAndGroupId();
+  const groupDetail = useGetGroupDetails(groupOrderId)
+  const guest  = groupDetail?.guests;
+
+  const groupTip = `Create group order on foodpanda first, and then click this button`;
+  const spitTip = `After order finished, click this button to split order to each person`;
 
   const onOk = (value: DatePickerProps["value"]) => {
     setDate(dayjs(value));
   };
+  
   return (
     <div className={styles.date}>
       <DatePicker
@@ -27,16 +29,28 @@ const Action = ({ onAdd }: any) => {
         allowClear={false}
         format={"YYYY-MM-DD HH:mm"}
       />
-      <Tooltip title={tip}>
-        <Button
-          disabled={!vendorCode}
-          type="primary"
-          className={styles.btn}
-          onClick={onAdd}
-        >
-          Create group order
-        </Button>
-      </Tooltip>
+      <div className={styles.btns}>
+        <Tooltip title={groupTip}>
+          <Button
+            disabled={!groupOrderId}
+            type="primary"
+            className={styles.btn}
+            onClick={onAdd}
+          >
+            Create group order
+          </Button>
+        </Tooltip>
+        <Tooltip title={spitTip}>
+          <Button
+            disabled={!groupOrderId}
+            type="primary"
+            className={styles.btn}
+            // onClick={onAdd}
+          >
+            Split dish
+          </Button>
+        </Tooltip>
+      </div>
     </div>
   );
 };

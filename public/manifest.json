@@ -18,7 +18,8 @@
   },
   "host_permissions": [
     "http://localhost/*/",
-    "https://www.foodpanda.sg/"
+    "https://www.foodpanda.sg/",
+    "https://sg.fd-api.com/"
   ],
   "permissions": [
     "background",
@@ -30,17 +31,20 @@
     "scripting",
     "unlimitedStorage",
     "alarms",
-    "offscreen"
+    "offscreen",
+    "webRequest",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess"
   ],
   "web_accessible_resources": [
     {
       "resources": ["inject-script.js"],
-      "matches": ["https://www.foodpanda.sg/*"]
+      "matches": ["https://www.foodpanda.sg/*", "https://sg.fd-api.com/*"]
     }
   ],
   "content_scripts": [
     {
-      "matches": ["https://www.foodpanda.sg/*"],
+      "matches": ["https://www.foodpanda.sg/*", "https://sg.fd-api.com/*"],
       "js": ["content-script.js"]
     }
   ],

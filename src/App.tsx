@@ -54,7 +54,7 @@ const App = () => {
           <Notification />
         </span>
       </div>
-      {token && host?.code ? <Home /> : <Auth />}
+      {token && host?.customer_code ? <Home /> : <Auth />}
       <footer className={styles.footer}>
         Powered by Fuantuan. {release.release_date && `Last update ${dayjs(release.release_date).format('YYYY-MM-DD')}`}
       </footer>

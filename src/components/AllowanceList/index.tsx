@@ -1,17 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  useGetAllowanceList,
+  useGetHostAllowance,
   useGetParticipants,
   useInitialGroup,
   useSearchColleagues,
 } from "../../hooks/useRequest";
-import { Button, Input, Select } from "antd";
+import { Button, Input, Popconfirm, Select } from "antd";
 import styles from "./index.module.scss";
 import { useMyContext } from "../../hooks/useContext";
 import DateSelect from "../Action";
 import Table, { ColumnsType } from "antd/es/table";
 import { YOU } from "../../constants";
 import { debounce } from "../../utils";
+import { Group } from "../../types";
 
 interface Props {
   keyId: string;
@@ -19,36 +20,42 @@ interface Props {
 
 const AllowanceList = ({ keyId }: Props) => {
   const { storage, updateStorage } = useMyContext();
-  const { list } = storage;
+  const { list, host } = storage;
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [selectedRows, setSelectedRows] = useState<
     { name: string; customer_code: string }[]
   >([]);
   const [search, setSearch] = useState<string>();
   const [colleague, setColleague] = useState<string>();
+  const [token, setToken] = useState<string>();
   const userList = useMemo(() => {
     return (
       list?.groups
         .find((item: any) => item.key === keyId)
-        ?.list?.filter((item: any) => item) || []
+        ?.colleagues?.filter((item: any) => item) || []
     );
   }, [list?.groups]);
 
-  const participants = useGetParticipants(userList) ?? new Map();
+  useGetParticipants();
+  useGetHostAllowance()
 
-  const idList = useMemo(() => {
-    return Array.from(participants.keys());
-  }, [participants]);
-
-  const [allowanceList, loading] = useGetAllowanceList(idList);
-
-  const onSearchAdd = (value: string) => {
+  const onSearchAdd = (value: string, option: any) => {
     if (!value) return;
-    const groups = list?.groups.map((item: any) => {
+    const groups: Group[] | undefined = list?.groups.map((item: any) => {
       if (item?.key === keyId) {
         return {
           ...item,
-          list: [...new Set([...(item?.list ?? []), value])],
+          colleagues: [
+            ...new Set([
+              ...(item?.colleagues ?? []),
+              {
+                realName: option.realName,
+                email: value,
+                token: "",
+                customer_code: option.customer_code,
+              },
+            ]),
+          ],
         };
       }
       return item;
@@ -62,11 +69,13 @@ const AllowanceList = ({ keyId }: Props) => {
   };
 
   const onDelete = (key: string) => {
-    const groups = list?.groups.map((item: any) => {
+    const groups: Group[] | undefined = list?.groups.map((item: any) => {
       if (item?.key === keyId) {
         return {
           ...item,
-          list: item?.list?.filter((item: any) => item !== key),
+          colleagues: item?.colleagues?.filter(
+            (item: any) => item.customer_code !== key
+          ),
         };
       }
       return item;
@@ -81,27 +90,45 @@ const AllowanceList = ({ keyId }: Props) => {
     setSearch(value);
   };
 
-  const debounceSearch = debounce(onSelectSearch, 500);
+  const onAddToken = (key: string) => {
+    const groups: Group[] | undefined = list?.groups.map((item) => {
+      if (item?.key === keyId) {
+        return {
+          ...item,
+          colleagues: item?.colleagues.map((colleagueItem) => {
+            if (colleagueItem.customer_code === key) {
+              return {
+                ...colleagueItem,
+                token,
+              };
+            }
+            return colleagueItem;
+          }),
+        };
+      }
+      return item;
+    });
+    updateStorage("list", {
+      ...list,
+      groups,
+    });
+    setToken("");
+  };
 
-  const dataSource = useMemo(() => {    
-    return allowanceList?.map((item) => ({
-      name: participants.get(item.customer_code)?.name ?? "You",
-      key: participants.get(item.customer_code)?.key, // for delete
-      ...item,
-    })) ?? [];
-  }, [allowanceList])
+  const debounceSearch = debounce(onSelectSearch, 500);
 
   const rowSelection = {
     selectedRowKeys,
     onChange: (selectedRowKeys: React.Key[], selectedRows: any[]) => {
       setSelectedRows(selectedRows);
       setSelectedRowKeys(selectedRowKeys);
-      console.log(
-        `selectedRowKeys: ${selectedRowKeys}`,
-        "selectedRows: ",
-        selectedRows
-      );
     },
+    getCheckboxProps: (record: any) => ({
+      disabled: !!userList.find(
+        (item) => item.token === "" && item.customer_code === record.customer_code
+      ),
+      name: record.name,
+    }),
   };
 
   const request = useInitialGroup(
@@ -111,7 +138,7 @@ const AllowanceList = ({ keyId }: Props) => {
   const columns: ColumnsType<any> = [
     {
       title: "Name",
-      dataIndex: "name",
+      dataIndex: "realName",
       width: "30%",
     },
     {
@@ -121,6 +148,29 @@ const AllowanceList = ({ keyId }: Props) => {
     {
       title: "Allowance",
       dataIndex: "allowance",
+    },
+    {
+      title: "Token",
+      dataIndex: "token",
+      render: (_: any, record: any) => (
+        <div>
+          <Popconfirm
+            title={record?.token ? "Update Token" : "Add Token"}
+            description={
+              <Input value={token} onChange={(e) => setToken(e.target.value)} />
+            }
+            onConfirm={() => onAddToken(record.customer_code)}
+            icon={null}
+          >
+            <Button
+              disabled={record.name === YOU}
+              type={record?.token ? "primary" : "dashed"}
+            >
+              {record?.token ? "Update" : "Add"}
+            </Button>
+          </Popconfirm>
+        </div>
+      ),
     },
     {
       title: "Operation",
@@ -142,16 +192,18 @@ const AllowanceList = ({ keyId }: Props) => {
   const colleaguesList = useSearchColleagues(search);
 
   const options = colleaguesList
-    ?.filter((o) => !Array.from(participants.keys()).includes(o.customer_code))
+    ?.filter(
+      (o) =>
+        !Array.from(userList.map((item) => item.customer_code)).includes(
+          o.customer_code
+        )
+    )
     .map((item) => ({
       value: item.email,
+      customer_code: item.customer_code,
+      realName: `${item.first_name} ${item.last_name}`,
       label: `${item.first_name} ${item.last_name}`,
     }));
-
-  useEffect(() => {
-    setSelectedRowKeys(allowanceList.map((item) => item.customer_code));
-    setSelectedRows(dataSource)
-  }, [allowanceList]);
 
   return (
     <div className={styles.wrapper}>
@@ -162,16 +214,16 @@ const AllowanceList = ({ keyId }: Props) => {
         bordered
         size="small"
         columns={columns}
-        dataSource={[...dataSource]}
+        dataSource={userList}
         pagination={false}
         scroll={{ y: 250 }}
-        loading={loading}
+        // loading={loading}
       />
       <div className={styles.footer}>
         Total{" "}
-        {allowanceList
-          ?.filter((item) => selectedRowKeys.includes(item.customer_code))
-          ?.reduce((prev, curr) => prev + curr.allowance, 0)
+        {userList
+          ?.filter((item) => selectedRowKeys.includes(item.customer_code ?? ""))
+          ?.reduce((prev, curr) => prev + (curr.allowance ?? 0), host?.allowance ?? 0)
           ?.toFixed(2)}
         <Select
           showSearch
