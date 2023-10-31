@@ -4,15 +4,15 @@ import {
   useGetParticipants,
   useInitialGroup,
   useSearchColleagues,
+  useVerifyToken,
 } from "../../hooks/useRequest";
 import { Button, Input, Popconfirm, Select } from "antd";
 import styles from "./index.module.scss";
 import { useMyContext } from "../../hooks/useContext";
 import DateSelect from "../Action";
 import Table, { ColumnsType } from "antd/es/table";
-import { YOU } from "../../constants";
 import { debounce } from "../../utils";
-import { Group } from "../../types";
+import { Group, ListItem } from "../../types";
 
 interface Props {
   keyId: string;
@@ -22,9 +22,7 @@ const AllowanceList = ({ keyId }: Props) => {
   const { storage, updateStorage } = useMyContext();
   const { list, host } = storage;
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [selectedRows, setSelectedRows] = useState<
-    { name: string; customer_code: string }[]
-  >([]);
+  const [selectedRows, setSelectedRows] = useState<ListItem[]>([]);
   const [search, setSearch] = useState<string>();
   const [colleague, setColleague] = useState<string>();
   const [token, setToken] = useState<string>();
@@ -37,7 +35,8 @@ const AllowanceList = ({ keyId }: Props) => {
   }, [list?.groups]);
 
   useGetParticipants();
-  useGetHostAllowance()
+  useGetHostAllowance();
+  const verifyToken = useVerifyToken();
 
   const onSearchAdd = (value: string, option: any) => {
     if (!value) return;
@@ -68,7 +67,8 @@ const AllowanceList = ({ keyId }: Props) => {
     setColleague("");
   };
 
-  const onDelete = (key: string) => {
+  const onDelete = (key?: string) => {
+    if (!key) return;
     const groups: Group[] | undefined = list?.groups.map((item: any) => {
       if (item?.key === keyId) {
         return {
@@ -90,7 +90,13 @@ const AllowanceList = ({ keyId }: Props) => {
     setSearch(value);
   };
 
-  const onAddToken = (key: string) => {
+  const onAddToken = async (key?: string) => {
+    const isVerified = await verifyToken(token, key);
+    if (!isVerified) {
+      return new Promise((resolve, reject) => {
+        reject("Error Token");
+      });
+    }
     const groups: Group[] | undefined = list?.groups.map((item) => {
       if (item?.key === keyId) {
         return {
@@ -125,15 +131,14 @@ const AllowanceList = ({ keyId }: Props) => {
     },
     getCheckboxProps: (record: any) => ({
       disabled: !!userList.find(
-        (item) => item.token === "" && item.customer_code === record.customer_code
+        (item) =>
+          item.token === "" && item.customer_code === record.customer_code
       ),
       name: record.name,
     }),
   };
 
-  const request = useInitialGroup(
-    selectedRows.filter((item) => item.name !== YOU)
-  );
+  const request = useInitialGroup(selectedRows);
 
   const columns: ColumnsType<any> = [
     {
@@ -152,7 +157,7 @@ const AllowanceList = ({ keyId }: Props) => {
     {
       title: "Token",
       dataIndex: "token",
-      render: (_: any, record: any) => (
+      render: (_: any, record: ListItem) => (
         <div>
           <Popconfirm
             title={record?.token ? "Update Token" : "Add Token"}
@@ -162,10 +167,7 @@ const AllowanceList = ({ keyId }: Props) => {
             onConfirm={() => onAddToken(record.customer_code)}
             icon={null}
           >
-            <Button
-              disabled={record.name === YOU}
-              type={record?.token ? "primary" : "dashed"}
-            >
+            <Button type={record?.token ? "primary" : "dashed"}>
               {record?.token ? "Update" : "Add"}
             </Button>
           </Popconfirm>
@@ -175,13 +177,9 @@ const AllowanceList = ({ keyId }: Props) => {
     {
       title: "Operation",
       dataIndex: "operation",
-      render: (_: any, record: any) => (
+      render: (_: any, record: ListItem) => (
         <div>
-          <Button
-            disabled={record.name === YOU}
-            type="link"
-            onClick={() => onDelete(record.key)}
-          >
+          <Button type="link" onClick={() => onDelete(record.customer_code)}>
             Delete
           </Button>
         </div>
@@ -223,7 +221,10 @@ const AllowanceList = ({ keyId }: Props) => {
         Total{" "}
         {userList
           ?.filter((item) => selectedRowKeys.includes(item.customer_code ?? ""))
-          ?.reduce((prev, curr) => prev + (curr.allowance ?? 0), host?.allowance ?? 0)
+          ?.reduce(
+            (prev, curr) => prev + (curr.allowance ?? 0),
+            host?.allowance ?? 0
+          )
           ?.toFixed(2)}
         <Select
           showSearch
