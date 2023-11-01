@@ -12,7 +12,7 @@ export const useGetInitial = () => {
       const host = await getFromStorage("host");
       let list = await getFromStorage("list");
       const enableNote = await getFromStorage("enableNote");
-      if(list?.groups?.[0]?.list) {
+      if(list?.groups?.[0]?.list && !list?.groups?.[0]?.colleagues) {
         list = {
           ...list,
           groups: list.groups.map(item => ({
