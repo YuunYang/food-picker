@@ -223,25 +223,6 @@ export const useSearchColleagues = (query?: string) => {
   return list;
 }
 
-export const useGetGroupDetails = (groupId: string) => {
-  const { storage } = useMyContext()
-  const { token } = storage;
-  const [groupDetail, setGroupDetail] = useState<Group_Detail>()
-
-  useEffect(() => {
-    if (!groupId) return;
-    if (!token) return;
-    const headers = getRequestHeaders(token)
-    axios.get<{ data: Group_Detail }>(`${GET_GROUP_DETAILS}/${groupId}`, {
-      headers
-    }).then(({ data }) => {
-      const list = data?.data;
-      setGroupDetail(list)
-    })
-  }, [groupId, token])
-
-  return groupDetail
-}
 
 export const useVerifyToken = () => {
   const { date, storage } = useMyContext()
