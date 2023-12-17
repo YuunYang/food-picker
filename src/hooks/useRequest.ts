@@ -1,7 +1,7 @@
 import axios from "axios";
-import { ADDRESS, ADD_PARTICIPANTS, ALLOWANCE, GET_COLLEAGUES, GET_GROUP_DETAILS, GROUPIE_CART } from "../constants/url";
+import { ADDRESS, ADD_PARTICIPANTS, ALLOWANCE, GET_COLLEAGUES, GROUPIE_CART } from "../constants/url";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AllowanceRes, ColleaguesRes, Address, Group_Detail, ListItem, Storage } from "../types";
+import { AllowanceRes, ColleaguesRes, Address, ListItem, Storage } from "../types";
 import { useMyContext } from "./useContext";
 import { sendMessagePromise } from "../utils";
 
@@ -53,19 +53,54 @@ const updateGroup = (list: Storage['list'], data: ListItem): Storage['list'] => 
   }
 }
 
+export const getProductList = async () => {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+  const id = tabs?.[0].id;
+  if (!id) return
+  const resp = await sendMessagePromise(id, { type: 'GET_CART' });
+  let cart: {
+    vendor_cart?: {
+      products?: any[]
+    }[]
+  } = {};
+  try {
+    cart = JSON.parse(resp?.cart);
+  } catch (error) {
+    console.log(error)
+  }
+  console.log(cart)
+  return cart.vendor_cart?.[0].products;
+}
+
 const useGroupieCart = (participantMap: ListItem[]) => {
   const [id, groupOrderId] = useGetIdAndGroupId()
 
-  const request = () => Promise.all(participantMap.map(async (participant) => {
-    if(!participant.token) return;
-    const reqBody = {
-      groupie_id: groupOrderId,
-      customer_name: participant.realName,
-      products: []
-    };
-    const headers = getRequestHeaders(participant.token)
-    await axios.post(GROUPIE_CART, reqBody, { headers })
-  }))
+  const request = (products?: any[]) => {
+    return () => Promise.all(participantMap.map(async (participant) => {
+      if(!participant.token || !products?.length) return;
+      const product = products?.pop()
+      const reqBody = {
+        groupie_id: groupOrderId,
+        customer_name: participant.realName,
+        products: [{
+          id: product.id,
+          name: product.name,
+          quantity: product.quantity,
+          toppings: product.toppings,
+          total_price: product.total_price,
+          comments: product.special_instructions,
+          additional_parameters: {
+            is_alcoholic_item: product.is_alcoholic_item,
+            sold_out_option: product.sold_out_option,
+            vat_percentage: product.vat_percentage,
+            variation_id: product.variation_id,
+          }
+        }]
+      };
+      const headers = getRequestHeaders(participant.token)
+      await axios.post(GROUPIE_CART, reqBody, { headers })
+    }))
+  }
   return request
 }
 
@@ -192,8 +227,10 @@ export const useInitialGroup = (participantMap: ListItem[]) => {
       }),
     };
 
+    const products = await getProductList();
     await axios.post(ADD_PARTICIPANTS, reqBody, { headers })
-    await requestCart();
+    const request = requestCart(products);
+    await request();
 
     chrome.tabs.reload(id);
   }

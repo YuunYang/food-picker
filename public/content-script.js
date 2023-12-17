@@ -23,6 +23,13 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     localStorage.setItem('groupOrderId', request.groupOrderId);
     localStorage.setItem('groupOrderUrl', request.groupOrderUrl);
   }
+  
+  if (request.type === "GET_CART") {
+    const cart = localStorage.getItem('cart');
+    sendResponse({ cart })
+    return true;
+  }
+
   if (!request.type === "RECEIVE") {
     return;
   }
